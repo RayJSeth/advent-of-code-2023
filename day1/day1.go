@@ -3,20 +3,20 @@ package day1
 import (
 	"fmt"
 	"log"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
+
+	"rayjseth.io/advent2023/util"
 )
 
 var conversions = map[string]int{"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9}
 
 func GetAnswers() {
-	in, err := os.ReadFile("./day1/input")
+	lines, err := util.ReadFileToLines("./day1/input")
 	if err != nil {
 		log.Fatal("Input file not found")
 	}
-	lines := strings.Split(string(in), "\n")
 	fmt.Println("Day1:")
 	part1(lines)
 	part2(lines)
