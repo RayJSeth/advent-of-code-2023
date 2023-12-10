@@ -37,68 +37,64 @@ func part1(lines []string) {
 		lineParts := mapLineParts(line)
 		lineSymbolCoords := plotLineSymbols(line)
 
-		// anchor on previous line to look for symbols downwards or laterally
-		// a little awkward with the asymmetry - only one of these up or down needs to do the lateral
-		// just doing it here since it comes first
+		// anchor on previous line to look for symbols downwards or diagonally down
 		for _, prevLinePartNumber := range prevLineParts {
 			for _, idx := range prevLinePartNumber.coords {
 				isLeftmostIdx := slices.Index(prevLinePartNumber.coords, idx) == 0
 				isRightmostIdx := prevLinePartNumber.coords[len(prevLinePartNumber.coords)-1] == idx
 				isOnLastLine := !(i < len(lines))
+				isFirstRune := idx == 0
+				isLastRune := idx == len(line)
 
-				// always look down on nonlast line
+				// only look down if there is a row below
 				if !isOnLastLine {
+					// look straight down
 					if slices.Contains(lineSymbolCoords, idx) {
 						total += prevLinePartNumber.number
 					}
-				}
-
-				// is margin left and cursor left
-				if idx > 0 && isLeftmostIdx {
-					// look left
-					if slices.Contains(prevLineSymbolCoords, idx-1) {
-						total += prevLinePartNumber.number
-						// is margin down
-					} else if !isOnLastLine {
+					// only look downleft if there is a column left and this is the leftmost rune of a part sequence
+					if !isFirstRune && isLeftmostIdx {
 						// look downleft
 						if slices.Contains(lineSymbolCoords, idx-1) {
 							total += prevLinePartNumber.number
 						}
 					}
-				}
-				// is margin right and cursor right
-				if idx < len(line) && isRightmostIdx {
-					// look downright and right
-					if slices.Contains(lineSymbolCoords, idx+1) || slices.Contains(prevLineSymbolCoords, idx+1) {
-						total += prevLinePartNumber.number
+					// only look downright if there is a column right and this is the rightmost rune of a part sequence
+					if !isLastRune && isRightmostIdx {
+						// look downright
+						if slices.Contains(lineSymbolCoords, idx+1) {
+							total += prevLinePartNumber.number
+						}
 					}
 				}
 
 			}
 		}
 
-		// anchor on current line to look for symbols upwards
+		// anchor on current line to look for symbols upwards, diagonally upwards, or laterally
 		for _, linePartNumber := range lineParts {
 			for _, idx := range linePartNumber.coords {
 				isLeftmostIdx := slices.Index(linePartNumber.coords, idx) == 0
 				isRightmostIdx := linePartNumber.coords[len(linePartNumber.coords)-1] == idx
+				isFirstRune := idx == 0
+				isLastRune := idx == len(line)
 
 				// always look up since start on 1th line
 				if slices.Contains(prevLineSymbolCoords, idx) {
 					total += linePartNumber.number
 				}
 
-				// is margin left and cursor left
-				if idx > 0 && isLeftmostIdx {
-					// look upleft
-					if slices.Contains(prevLineSymbolCoords, idx-1) {
+				// only look upleft + left if there is a column left and this is the leftmost rune of a part sequence
+				if !isFirstRune && isLeftmostIdx {
+					// look upleft and left
+					if slices.Contains(prevLineSymbolCoords, idx-1) || slices.Contains(lineSymbolCoords, idx-1) {
 						total += linePartNumber.number
 					}
 				}
-				// is margin right and cursor right
-				if idx < len(line) && isRightmostIdx {
-					// look upright
-					if slices.Contains(prevLineSymbolCoords, idx+1) {
+				// only look upright + right if there is a column right and this is the rightmost rune of a part sequence
+				if !isLastRune && isRightmostIdx {
+					// look upright and right
+					if slices.Contains(prevLineSymbolCoords, idx+1) || slices.Contains(lineSymbolCoords, idx+1) {
 						total += linePartNumber.number
 					}
 				}
@@ -106,9 +102,8 @@ func part1(lines []string) {
 		}
 
 		// make curr prev so next iter can make n+1 curr to compare
-		prevLine = line
-		prevLineParts = mapLineParts(prevLine)
-		prevLineSymbolCoords = plotLineSymbols(prevLine)
+		prevLineParts = mapLineParts(line)
+		prevLineSymbolCoords = plotLineSymbols(line)
 	}
 	fmt.Println("part1:", total)
 }
