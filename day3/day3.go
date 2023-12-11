@@ -21,6 +21,7 @@ func GetAnswers() {
 	}
 	fmt.Println("Day3:")
 	part1(lines)
+	part2(lines)
 
 	fmt.Print("\n")
 }
@@ -28,84 +29,234 @@ func GetAnswers() {
 func part1(lines []string) {
 	total := 0
 
-	prevLine := lines[0]
-	prevLineParts := mapLineParts(prevLine)
-	prevLineSymbolCoords := plotLineSymbols(prevLine)
+	for i := 0; i < len(lines); i++ {
+		currentLine := lines[i]
+		parts := mapLineParts(currentLine)
+		currentSymbols := plotLineSymbols(currentLine)
+		var prevSymbols []int
+		var nextSymbols []int
 
-	for i := 1; i < len(lines); i++ {
-		line := lines[i]
-		lineParts := mapLineParts(line)
-		lineSymbolCoords := plotLineSymbols(line)
-
-		// anchor on previous line to look for symbols downwards or diagonally down
-		for _, prevLinePartNumber := range prevLineParts {
-			for _, idx := range prevLinePartNumber.coords {
-				isLeftmostIdx := slices.Index(prevLinePartNumber.coords, idx) == 0
-				isRightmostIdx := prevLinePartNumber.coords[len(prevLinePartNumber.coords)-1] == idx
-				isOnLastLine := !(i < len(lines))
-				isFirstRune := idx == 0
-				isLastRune := idx == len(line)
-
-				// only look down if there is a row below
-				if !isOnLastLine {
-					// look straight down
-					if slices.Contains(lineSymbolCoords, idx) {
-						total += prevLinePartNumber.number
-					}
-					// only look downleft if there is a column left and this is the leftmost rune of a part sequence
-					if !isFirstRune && isLeftmostIdx {
-						// look downleft
-						if slices.Contains(lineSymbolCoords, idx-1) {
-							total += prevLinePartNumber.number
-						}
-					}
-					// only look downright if there is a column right and this is the rightmost rune of a part sequence
-					if !isLastRune && isRightmostIdx {
-						// look downright
-						if slices.Contains(lineSymbolCoords, idx+1) {
-							total += prevLinePartNumber.number
-						}
-					}
-				}
-
-			}
+		if i > 0 {
+			prevSymbols = plotLineSymbols(lines[i-1])
+		}
+		if i < len(lines)-1 {
+			nextSymbols = plotLineSymbols(lines[i+1])
 		}
 
-		// anchor on current line to look for symbols upwards, diagonally upwards, or laterally
-		for _, linePartNumber := range lineParts {
-			for _, idx := range linePartNumber.coords {
-				isLeftmostIdx := slices.Index(linePartNumber.coords, idx) == 0
-				isRightmostIdx := linePartNumber.coords[len(linePartNumber.coords)-1] == idx
-				isFirstRune := idx == 0
-				isLastRune := idx == len(line)
-
-				// always look up since start on 1th line
-				if slices.Contains(prevLineSymbolCoords, idx) {
-					total += linePartNumber.number
-				}
-
-				// only look upleft + left if there is a column left and this is the leftmost rune of a part sequence
-				if !isFirstRune && isLeftmostIdx {
-					// look upleft and left
-					if slices.Contains(prevLineSymbolCoords, idx-1) || slices.Contains(lineSymbolCoords, idx-1) {
-						total += linePartNumber.number
-					}
-				}
-				// only look upright + right if there is a column right and this is the rightmost rune of a part sequence
-				if !isLastRune && isRightmostIdx {
-					// look upright and right
-					if slices.Contains(prevLineSymbolCoords, idx+1) || slices.Contains(lineSymbolCoords, idx+1) {
-						total += linePartNumber.number
-					}
+		for _, part := range parts {
+			for _, partCoord := range part.coords {
+				isStartOfLine := partCoord == 0
+				isEndOfLine := partCoord == len(currentLine)-1
+				res := scanAdjacentSymbols(part, currentSymbols, prevSymbols, nextSymbols, isStartOfLine, isEndOfLine)
+				// if hit, then move to next part number
+				if res > 0 {
+					total += res
+					break
 				}
 			}
 		}
-
-		// make curr prev so next iter can make n+1 curr to compare
-		prevLineParts = mapLineParts(line)
-		prevLineSymbolCoords = plotLineSymbols(line)
 	}
 	fmt.Println("part1:", total)
+}
+
+func part2(lines []string) {
+	total := 0
+
+	for i := 0; i < len(lines); i++ {
+		currentLine := lines[i]
+		gearCoords := plotLineGears(currentLine)
+		// only scan when on a line with gears
+		if len(gearCoords) > 0 {
+			currentParts := mapLineParts(currentLine)
+			var prevParts []part
+			var nextParts []part
+
+			if i > 0 {
+				prevParts = mapLineParts(lines[i-1])
+			}
+			if i < len(lines)-1 {
+				nextParts = mapLineParts(lines[i+1])
+			}
+
+			for _, gearCoord := range gearCoords {
+				isStartOfLine := gearCoord == 0
+				isEndOfLine := gearCoord == len(currentLine)-1
+
+				total += scanAdjacentParts(gearCoord, currentParts, prevParts, nextParts, isStartOfLine, isEndOfLine)
+			}
+		}
+	}
+
+	fmt.Println("part2:", total)
+}
+
+func scanAdjacentSymbols(currentPart part, currentSymbols []int, prevSymbols []int, nextSymbols []int, isStartOfLine bool, isEndOfLine bool) int {
+	for _, idx := range currentPart.coords {
+		isLeftmostIdx := slices.Index(currentPart.coords, idx) == 0
+		isRightmostIdx := currentPart.coords[len(currentPart.coords)-1] == idx
+
+		// only look left if there is a column left and this is the leftmost rune of a part sequence
+		if !isStartOfLine && isLeftmostIdx {
+			if slices.Contains(currentSymbols, idx-1) {
+				return currentPart.number
+			}
+		}
+		// only look right if there is a column right and this is the rightmost rune of a part sequence
+		if !isEndOfLine && isRightmostIdx {
+			if slices.Contains(currentSymbols, idx+1) {
+				return currentPart.number
+			}
+		}
+
+		// only look down if there is a row below
+		if nextSymbols != nil {
+			// look down
+			if slices.Contains(nextSymbols, idx) {
+				return currentPart.number
+			}
+			// only look downleft if there is a column left and this is the leftmost rune of a part sequence
+			if !isStartOfLine && isLeftmostIdx {
+				// look downleft
+				if slices.Contains(nextSymbols, idx-1) {
+					return currentPart.number
+				}
+			}
+			// only look downright if there is a column right and this is the rightmost rune of a part sequence
+			if !isEndOfLine && isRightmostIdx {
+				// look downright
+				if slices.Contains(nextSymbols, idx+1) {
+					return currentPart.number
+				}
+			}
+		}
+		// only look up if there is a row above
+		if prevSymbols != nil {
+			// look up
+			if slices.Contains(prevSymbols, idx) {
+				return currentPart.number
+			}
+
+			// only look upleft if there is a column left and this is the leftmost rune of a part sequence
+			if !isStartOfLine && isLeftmostIdx {
+				// look upleft and left
+				if slices.Contains(prevSymbols, idx-1) {
+					return currentPart.number
+				}
+			}
+			// only look upright if there is a column right and this is the rightmost rune of a part sequence
+			if !isEndOfLine && isRightmostIdx {
+				// look upright and right
+				if slices.Contains(prevSymbols, idx+1) {
+					return currentPart.number
+				}
+			}
+		}
+	}
+
+	return 0
+}
+
+func scanAdjacentParts(gearCoord int, currentParts []part, prevParts []part, nextParts []part, isStartOfLine bool, isEndOfLine bool) int {
+	multiplicand := 0
+
+	for _, part := range currentParts {
+		// only look left if there is a column left
+		if !isStartOfLine {
+			if slices.Contains(part.coords, gearCoord-1) {
+				if multiplicand == 0 {
+					multiplicand = part.number
+				} else {
+					return multiplicand * part.number
+				}
+			}
+		}
+		// only look right if there is a column right
+		if !isEndOfLine {
+			if slices.Contains(part.coords, gearCoord+1) {
+				if multiplicand == 0 {
+					multiplicand = part.number
+				} else {
+					return multiplicand * part.number
+				}
+			}
+		}
+	}
+	// only look up if there is a row up
+	for _, part := range prevParts {
+		// look straight up
+		if slices.Contains(part.coords, gearCoord) {
+			if multiplicand == 0 {
+				multiplicand = part.number
+				// move to next part on first hit
+				// avoids double counting when gear adjacent to two numbers in same part
+				continue
+			} else {
+				return multiplicand * part.number
+			}
+		}
+		// only look upleft if there is a column left
+		if !isStartOfLine {
+			if slices.Contains(part.coords, gearCoord-1) {
+				if multiplicand == 0 {
+					multiplicand = part.number
+					// move to next part on first hit
+					// avoids double counting when gear adjacent to two numbers in same part
+					continue
+				} else {
+					return multiplicand * part.number
+				}
+			}
+		}
+		// only look upright if there is a column right
+		if !isEndOfLine {
+			if slices.Contains(part.coords, gearCoord+1) {
+				if multiplicand == 0 {
+					multiplicand = part.number
+				} else {
+					return multiplicand * part.number
+				}
+			}
+		}
+	}
+	// only look down if there is a row down
+	for _, part := range nextParts {
+		// look straight down
+		if slices.Contains(part.coords, gearCoord) {
+			if multiplicand == 0 {
+				multiplicand = part.number
+				// move to next part on first hit
+				// avoids double counting when gear adjacent to two numbers in same part
+				continue
+			} else {
+				return multiplicand * part.number
+			}
+		}
+		// only look downleft if there is a column left
+		if !isStartOfLine {
+			if slices.Contains(part.coords, gearCoord-1) {
+				if multiplicand == 0 {
+					multiplicand = part.number
+					// move to next part on first hit
+					// avoids double counting when gear adjacent to two numbers in same part
+					continue
+				} else {
+					return multiplicand * part.number
+				}
+			}
+		}
+		// only look downright if there is a column right
+		if !isEndOfLine {
+			if slices.Contains(part.coords, gearCoord+1) {
+				if multiplicand == 0 {
+					multiplicand = part.number
+				} else {
+					return multiplicand * part.number
+				}
+			}
+		}
+	}
+
+	return 0
 }
 
 func mapLineParts(line string) []part {
@@ -147,6 +298,17 @@ func plotLineSymbols(line string) []int {
 			if err != nil {
 				coords = append(coords, i)
 			}
+		}
+	}
+	return coords
+}
+
+func plotLineGears(line string) []int {
+	coords := []int{}
+	for i, r := range line {
+		s := string(r)
+		if s == "*" {
+			coords = append(coords, i)
 		}
 	}
 	return coords
