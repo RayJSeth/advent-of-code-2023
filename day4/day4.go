@@ -17,11 +17,11 @@ func GetAnswers() {
 	}
 	fmt.Println("Day4:")
 	part1(lines)
+	part2(lines)
 	fmt.Print("\n")
 }
 
 func part1(lines []string) {
-
 	total := 0
 	for _, line := range lines {
 		subTotal := 0
@@ -40,9 +40,29 @@ func part1(lines []string) {
 	fmt.Println("Part1:", total)
 }
 
+func part2(lines []string) {
+	total := 0
+	copiesWon := make([]int, len(lines))
+	for i, line := range lines {
+		copiesWon[i] += 1
+		winningNumbers, matchNumbers := parseCard(line)
+		offset := 1
+		for _, winningNumber := range winningNumbers {
+			if slices.Contains(matchNumbers, winningNumber) {
+				copiesWon[i+offset] += 1 * copiesWon[i]
+				offset += 1
+			}
+		}
+	}
+	for _, card := range copiesWon {
+		total += card
+	}
+	fmt.Println("Part2:", total)
+}
+
 func parseCard(line string) ([]string, []string) {
 	numberBreakPattern := regexp.MustCompile(`\s+`)
-	ticketBreakPattern := regexp.MustCompile(`\|\s+`)
+	ticketBreakPattern := regexp.MustCompile(`\s+\|\s+`)
 
 	cardContent := strings.Split(line, ": ")[1]
 	cardSections := ticketBreakPattern.Split(cardContent, -1)
