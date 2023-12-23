@@ -49,8 +49,8 @@ func part1(lines []string) {
 				sStart, _ := strconv.Atoi(meArr[1])
 				mRange, _ := strconv.Atoi(meArr[2])
 				me = append(me, mapEntry{dStart: dStart, sStart: sStart, mRange: mRange})
-				// reset the parsed map since this is the label for the next map
 			} else {
+				// reset the parsed map since this is the label for the next map
 				me = nil
 			}
 			// empty line means current map is parsed so now interpret results
