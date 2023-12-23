@@ -16,7 +16,7 @@ var expected = map[string]int{
 }
 
 func GetAnswers() {
-	lines, err := util.ReadFileToLines("./day2/input")
+	lines, err := util.ReadFileToLines("./day2/input", true)
 	if err != nil {
 		log.Fatal("Input file not found")
 	}
